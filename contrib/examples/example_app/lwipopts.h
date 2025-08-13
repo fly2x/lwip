@@ -176,9 +176,16 @@ a lot of data that needs to be copied, this should be set high. */
 #define TCP_TTL                 255
 
 #define LWIP_ALTCP              (LWIP_TCP)
+
+/* TLS backend configuration - controlled by CMake */
 #ifdef LWIP_HAVE_MBEDTLS
 #define LWIP_ALTCP_TLS          (LWIP_TCP)
 #define LWIP_ALTCP_TLS_MBEDTLS  (LWIP_TCP)
+#endif
+
+#ifdef LWIP_HAVE_OPENHITLS  
+#define LWIP_ALTCP_TLS          (LWIP_TCP)
+#define LWIP_ALTCP_TLS_OPENHITLS 1
 #endif
 
 

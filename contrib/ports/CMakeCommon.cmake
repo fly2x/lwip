@@ -10,32 +10,96 @@ message (STATUS "Build type: ${CMAKE_BUILD_TYPE}")
 
 set(LWIP_CONTRIB_DIR ${LWIP_DIR}/contrib)
 
-# ARM mbedtls support https://tls.mbed.org/
-if(NOT DEFINED LWIP_MBEDTLSDIR)
-    set(LWIP_MBEDTLSDIR ${LWIP_DIR}/../mbedtls)
-    message(STATUS "LWIP_MBEDTLSDIR not set - using default location ${LWIP_MBEDTLSDIR}")
+# TLS backend selection options
+option(LWIP_USE_MBEDTLS "Use mbedTLS as TLS backend" OFF)
+option(LWIP_USE_OPENHITLS "Use OpenHiTLS as TLS backend" OFF)
+
+# Validate TLS backend selection
+if(LWIP_USE_MBEDTLS AND LWIP_USE_OPENHITLS)
+    message(FATAL_ERROR "Cannot enable both mbedTLS and OpenHiTLS backends simultaneously")
 endif()
-if(EXISTS ${LWIP_MBEDTLSDIR}/CMakeLists.txt)
-    set(LWIP_HAVE_MBEDTLS ON BOOL)
 
-    # Prevent building MBEDTLS programs and tests
-    set(ENABLE_PROGRAMS OFF CACHE BOOL "")
-    set(ENABLE_TESTING  OFF CACHE BOOL "")
+# Initialize TLS-related variables
+set(LWIP_HAVE_MBEDTLS OFF)
+set(LWIP_HAVE_OPENHITLS OFF)
+set(LWIP_MBEDTLS_DEFINITIONS "")
+set(LWIP_OPENHITLS_DEFINITIONS "")
+set(LWIP_MBEDTLS_INCLUDE_DIRS "")
+set(LWIP_OPENHITLS_INCLUDE_DIRS "")
+set(LWIP_MBEDTLS_LINK_LIBRARIES "")
+set(LWIP_OPENHITLS_LINK_LIBRARIES "")
 
-    # mbedtls uses cmake. Sweet!
-    add_subdirectory(${LWIP_MBEDTLSDIR} mbedtls)
+# ARM mbedtls support https://tls.mbed.org/
+if(LWIP_USE_MBEDTLS)
+    if(NOT DEFINED LWIP_MBEDTLSDIR)
+        set(LWIP_MBEDTLSDIR ${LWIP_DIR}/../mbedtls)
+        message(STATUS "LWIP_MBEDTLSDIR not set - using default location ${LWIP_MBEDTLSDIR}")
+    endif()
+    if(EXISTS ${LWIP_MBEDTLSDIR}/CMakeLists.txt)
+        set(LWIP_HAVE_MBEDTLS ON BOOL)
+        message(STATUS "Using mbedTLS backend from ${LWIP_MBEDTLSDIR}")
 
-    set (LWIP_MBEDTLS_DEFINITIONS
-        LWIP_HAVE_MBEDTLS=1
-    )
-    set (LWIP_MBEDTLS_INCLUDE_DIRS
-        ${LWIP_MBEDTLSDIR}/include
-    )
-    set (LWIP_MBEDTLS_LINK_LIBRARIES
-        mbedtls
-        mbedcrypto
-        mbedx509
-    )
+        # Prevent building MBEDTLS programs and tests
+        set(ENABLE_PROGRAMS OFF CACHE BOOL "")
+        set(ENABLE_TESTING  OFF CACHE BOOL "")
+
+        # mbedtls uses cmake. Sweet!
+        add_subdirectory(${LWIP_MBEDTLSDIR} mbedtls)
+
+        set (LWIP_MBEDTLS_DEFINITIONS
+            LWIP_HAVE_MBEDTLS=1
+        )
+        set (LWIP_MBEDTLS_INCLUDE_DIRS
+            ${LWIP_MBEDTLSDIR}/include
+        )
+        set (LWIP_MBEDTLS_LINK_LIBRARIES
+            mbedtls
+            mbedcrypto
+            mbedx509
+        )
+    else()
+        message(FATAL_ERROR "mbedTLS directory not found at ${LWIP_MBEDTLSDIR}")
+    endif()
+endif()
+
+# OpenHiTLS support
+if(LWIP_USE_OPENHITLS)
+    if(NOT DEFINED LWIP_OPENHITLSDIR)
+        set(LWIP_OPENHITLSDIR ${LWIP_DIR}/../openhitls_install)
+        message(STATUS "LWIP_OPENHITLSDIR not set - using default location ${LWIP_OPENHITLSDIR}")
+    endif()
+    if(EXISTS ${LWIP_OPENHITLSDIR}/include/hitls/tls/hitls.h)
+        set(LWIP_HAVE_OPENHITLS ON BOOL)
+        message(STATUS "Using OpenHiTLS backend from ${LWIP_OPENHITLSDIR}")
+
+        set (LWIP_OPENHITLS_DEFINITIONS
+            LWIP_HAVE_OPENHITLS=1
+        )
+        set (LWIP_OPENHITLS_INCLUDE_DIRS
+            ${LWIP_OPENHITLSDIR}/include
+            ${LWIP_OPENHITLSDIR}/include/hitls/bsl
+            ${LWIP_OPENHITLSDIR}/include/hitls/crypto
+            ${LWIP_OPENHITLSDIR}/include/hitls/pki
+            ${LWIP_OPENHITLSDIR}/include/hitls/tls
+        )
+        set (LWIP_OPENHITLS_LINK_LIBRARIES
+            ${LWIP_OPENHITLSDIR}/lib/libhitls_tls.a
+            ${LWIP_OPENHITLSDIR}/lib/libhitls_crypto.a
+            ${LWIP_OPENHITLSDIR}/lib/libhitls_bsl.a
+            ${LWIP_OPENHITLSDIR}/lib/libboundscheck.so
+        )
+    else()
+        message(FATAL_ERROR "OpenHiTLS directory not found at ${LWIP_OPENHITLSDIR}")
+    endif()
+endif()
+
+# Output selected backend
+if(LWIP_HAVE_OPENHITLS)
+    message(STATUS "TLS Backend: OpenHiTLS")
+elseif(LWIP_HAVE_MBEDTLS)
+    message(STATUS "TLS Backend: mbedTLS")
+else()
+    message(STATUS "TLS Backend: None")
 endif()
 
 set(LWIP_COMPILER_FLAGS_GNU_CLANG
@@ -69,6 +133,14 @@ if (NOT LWIP_HAVE_MBEDTLS)
     list(APPEND LWIP_COMPILER_FLAGS_GNU_CLANG
         -Wredundant-decls
         $<$<COMPILE_LANGUAGE:C>:-Wc++-compat>
+    )
+endif()
+
+# Relax some warnings for OpenHiTLS compatibility
+if(LWIP_HAVE_OPENHITLS)
+    list(APPEND LWIP_COMPILER_FLAGS_GNU_CLANG
+        -Wno-c90-c99-compat
+        -Wno-c++-compat
     )
 endif()
 

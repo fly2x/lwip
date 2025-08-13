@@ -1568,9 +1568,19 @@
  * This needs a port of the functions in altcp_tls.h to a TLS library.
  * A port to ARM mbedtls is provided with lwIP, see apps/altcp_tls/ directory
  * and LWIP_ALTCP_TLS_MBEDTLS option.
+ * A port to openHiTLS is also provided with lwIP, see apps/altcp_tls/ directory
+ * and LWIP_ALTCP_TLS_OPENHITLS option.
  */
 #if !defined LWIP_ALTCP_TLS || defined __DOXYGEN__
 #define LWIP_ALTCP_TLS                  0
+#endif
+
+/** LWIP_ALTCP_TLS_OPENHITLS==1: use openHiTLS for TLS support for altcp API.
+ * openHiTLS include directory must be reachable via include search path.
+ * When enabled, this adds openHiTLS as an alternative TLS backend to mbedTLS.
+ */
+#if !defined LWIP_ALTCP_TLS_OPENHITLS || defined __DOXYGEN__
+#define LWIP_ALTCP_TLS_OPENHITLS        0
 #endif
 
 /**

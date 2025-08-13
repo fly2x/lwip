@@ -228,6 +228,13 @@ set(lwipmbedtls_SRCS
     ${LWIP_DIR}/src/apps/snmp/snmpv3_mbedtls.c
 )
 
+# openHiTLS related files of lwIP rep
+set(lwipopenhitls_SRCS
+    ${LWIP_DIR}/src/apps/altcp_tls/altcp_tls_openhitls_complete.c
+    ${LWIP_DIR}/src/apps/altcp_tls/altcp_tls_openhitls_mem.c
+    ${LWIP_DIR}/src/apps/snmp/snmpv3_openhitls.c
+)
+
 # All LWIP files without apps
 set(lwipnoapps_SRCS
     ${lwipcore_SRCS}
@@ -291,3 +298,11 @@ add_library(lwipmbedtls EXCLUDE_FROM_ALL ${lwipmbedtls_SRCS})
 target_compile_options(lwipmbedtls PRIVATE ${LWIP_COMPILER_FLAGS})
 target_compile_definitions(lwipmbedtls PRIVATE ${LWIP_DEFINITIONS}  ${LWIP_MBEDTLS_DEFINITIONS})
 target_include_directories(lwipmbedtls PRIVATE ${LWIP_INCLUDE_DIRS} ${LWIP_MBEDTLS_INCLUDE_DIRS})
+
+# OpenHiTLS library - only build if enabled
+if(LWIP_HAVE_OPENHITLS)
+    add_library(lwipopenhitls EXCLUDE_FROM_ALL ${lwipopenhitls_SRCS})
+    target_compile_options(lwipopenhitls PRIVATE ${LWIP_COMPILER_FLAGS} -Wno-error -std=c99 -Wno-c90-c99-compat)
+    target_compile_definitions(lwipopenhitls PRIVATE ${LWIP_DEFINITIONS} ${LWIP_OPENHITLS_DEFINITIONS})
+    target_include_directories(lwipopenhitls PRIVATE ${LWIP_INCLUDE_DIRS} ${LWIP_OPENHITLS_INCLUDE_DIRS})
+endif()

@@ -25,10 +25,29 @@ set(lwipcontribportunixnetifs_SRCS
 )
 
 add_library(lwipcontribportunix EXCLUDE_FROM_ALL ${lwipcontribportunix_SRCS} ${lwipcontribportunixnetifs_SRCS})
-target_include_directories(lwipcontribportunix PRIVATE ${LWIP_INCLUDE_DIRS} ${LWIP_MBEDTLS_INCLUDE_DIRS})
+
+# Set basic include directories and definitions
+set(CONTRIB_INCLUDE_DIRS ${LWIP_INCLUDE_DIRS})
+set(CONTRIB_DEFINITIONS ${LWIP_DEFINITIONS})
+set(CONTRIB_LINK_LIBRARIES "")
+
+# Add TLS backend specific configurations
+if(LWIP_HAVE_MBEDTLS)
+    list(APPEND CONTRIB_INCLUDE_DIRS ${LWIP_MBEDTLS_INCLUDE_DIRS})
+    list(APPEND CONTRIB_DEFINITIONS ${LWIP_MBEDTLS_DEFINITIONS})
+    list(APPEND CONTRIB_LINK_LIBRARIES ${LWIP_MBEDTLS_LINK_LIBRARIES})
+endif()
+
+if(LWIP_HAVE_OPENHITLS)
+    list(APPEND CONTRIB_INCLUDE_DIRS ${LWIP_OPENHITLS_INCLUDE_DIRS})
+    list(APPEND CONTRIB_DEFINITIONS ${LWIP_OPENHITLS_DEFINITIONS})
+    list(APPEND CONTRIB_LINK_LIBRARIES ${LWIP_OPENHITLS_LINK_LIBRARIES})
+endif()
+
+target_include_directories(lwipcontribportunix PRIVATE ${CONTRIB_INCLUDE_DIRS})
 target_compile_options(lwipcontribportunix PRIVATE ${LWIP_COMPILER_FLAGS})
-target_compile_definitions(lwipcontribportunix PRIVATE ${LWIP_DEFINITIONS} ${LWIP_MBEDTLS_DEFINITIONS})
-target_link_libraries(lwipcontribportunix PUBLIC ${LWIP_MBEDTLS_LINK_LIBRARIES})
+target_compile_definitions(lwipcontribportunix PRIVATE ${CONTRIB_DEFINITIONS})
+target_link_libraries(lwipcontribportunix PUBLIC ${CONTRIB_LINK_LIBRARIES})
 
 if (CMAKE_SYSTEM_NAME STREQUAL "Linux")
     find_library(LIBUTIL util)
